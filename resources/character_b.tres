@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/character_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "B / POWER"
+color = Color(0.42, 0.75, 1, 1)
+speed = 205.0
+damages = Array[int]([18, 24, 35])
+knockbacks = Array[float]([210.0, 270.0, 400.0])
+attack_durations = Array[float]([0.27, 0.31, 0.42])
+attack_range = 90.0
+switch_damage = 38
+skill_damage = 46
+skill_cooldown = 3.8

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/character_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "A / RUSH"
+color = Color(1, 0.42, 0.63, 1)
+speed = 245.0
+damages = Array[int]([10, 13, 19])
+knockbacks = Array[float]([140.0, 180.0, 280.0])
+attack_durations = Array[float]([0.19, 0.21, 0.3])
+attack_range = 78.0
+switch_damage = 22
+skill_damage = 27
+skill_cooldown = 2.8
