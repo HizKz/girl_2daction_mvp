@@ -1,16 +1,45 @@
-[gd_resource type="Resource" script_class="CharacterStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CharacterStats" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/character_stats.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/skill_data.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/combo_attack_data.gd" id="3"]
+
+[sub_resource type="Resource" id="skill"]
+script = ExtResource("2")
+display_name = "ルナ・フィールド"
+kind = "slow_field"
+cooldown = 8.0
+radius = 96.0
+duration = 3.0
+speed_multiplier = 0.5
+
+[sub_resource type="Resource" id="combo"]
+script = ExtResource("3")
+display_name = "スターライン・キャッチ"
+kind = "hit_all"
+required_mark = "star"
+range_px = 300.0
+damage = 22
 
 [resource]
 script = ExtResource("1")
-display_name = "B / POWER"
-color = Color(0.42, 0.75, 1, 1)
-speed = 205.0
-damages = Array[int]([18, 24, 35])
-knockbacks = Array[float]([210.0, 270.0, 400.0])
-attack_durations = Array[float]([0.27, 0.31, 0.42])
-attack_range = 90.0
-switch_damage = 38
-skill_damage = 46
-skill_cooldown = 3.8
+display_name = "星宮 澪"
+color = Color(0.275, 0.408, 0.698, 1)
+speed = 160.0
+max_hp = 90
+damages = Array[int]([10, 12, 16])
+knockbacks = Array[float]([30.0, 40.0, 70.0])
+attack_startup = Array[float]([0.04, 0.04, 0.04])
+attack_active = Array[float]([0.06, 0.06, 0.06])
+attack_recovery = Array[float]([0.28, 0.28, 0.28])
+attack_ranges = Array[float]([260.0, 260.0, 260.0])
+attack_range = 260.0
+mark = "moon"
+projectile = true
+victory_line = "ふふっ。こはるとなら、大丈夫だね"
+hurt_line = "っ……油断した"
+switch_line = "狙いは任せて"
+icon_path = "res://portraits/mio/icon.png"
+portrait_path = "res://portraits/mio/normal.png"
+skill = SubResource("skill")
+switch_attack = SubResource("combo")

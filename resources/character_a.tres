@@ -1,16 +1,44 @@
-[gd_resource type="Resource" script_class="CharacterStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CharacterStats" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/character_stats.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/skill_data.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/combo_attack_data.gd" id="3"]
+
+[sub_resource type="Resource" id="skill"]
+script = ExtResource("2")
+display_name = "きらめきダッシュ"
+kind = "dash"
+cooldown = 5.0
+damage = 18
+distance = 120.0
+duration = 0.2
+
+[sub_resource type="Resource" id="combo"]
+script = ExtResource("3")
+display_name = "ムーンダイブ・ブレイク"
+kind = "dash_single"
+required_mark = "moon"
+range_px = 300.0
+damage = 35
 
 [resource]
 script = ExtResource("1")
-display_name = "A / RUSH"
-color = Color(1, 0.42, 0.63, 1)
-speed = 245.0
-damages = Array[int]([10, 13, 19])
-knockbacks = Array[float]([140.0, 180.0, 280.0])
-attack_durations = Array[float]([0.19, 0.21, 0.3])
-attack_range = 78.0
-switch_damage = 22
-skill_damage = 27
-skill_cooldown = 2.8
+display_name = "日向 こはる"
+color = Color(1, 0.502, 0.4, 1)
+speed = 190.0
+max_hp = 120
+damages = Array[int]([12, 14, 20])
+knockbacks = Array[float]([60.0, 80.0, 120.0])
+attack_startup = Array[float]([0.03, 0.03, 0.03])
+attack_active = Array[float]([0.06, 0.06, 0.06])
+attack_recovery = Array[float]([0.19, 0.19, 0.19])
+attack_ranges = Array[float]([48.0, 48.0, 48.0])
+attack_range = 48.0
+mark = "star"
+victory_line = "やったね、澪！　あたしたち最強っ！"
+hurt_line = "いたっ！　まだまだ！"
+switch_line = "まっかせて！"
+icon_path = "res://portraits/koharu/icon.png"
+portrait_path = "res://portraits/koharu/normal.png"
+skill = SubResource("skill")
+switch_attack = SubResource("combo")

@@ -25,14 +25,17 @@ var combo_timer := 0.0
 var kills := 0
 var game_over := false
 var rng := RandomNumberGenerator.new()
+var fields: Array[Dictionary] = []
 
 func _ready() -> void:
+	y_sort_enabled = true
 	_setup_inputs()
 	rng.randomize()
 	player = Fighter.new()
 	player.position = arena_size / 2.0
 	add_child(player)
 	camera = Camera2D.new()
+	camera.zoom = Vector2(2.0, 2.0)
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 8.0
 	player.add_child(camera)
@@ -41,12 +44,12 @@ func _ready() -> void:
 		_spawn_enemy()
 
 func _setup_inputs() -> void:
-	var keys := {"move_up": KEY_W, "move_down": KEY_S, "move_left": KEY_A, "move_right": KEY_D, "attack": KEY_J, "skill": KEY_K, "dodge": KEY_SPACE, "switch_character": KEY_L, "restart": KEY_R}
+	var keys := {"move_up": KEY_L, "move_down": KEY_I, "move_left": KEY_E, "move_right": KEY_A, "attack": KEY_K, "skill": KEY_T, "dodge": KEY_N, "switch_character": KEY_S, "restart": KEY_R}
 	for action in keys:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
 		var event := InputEventKey.new()
-		event.physical_keycode = keys[action]
+		event.keycode = keys[action]
 		InputMap.action_add_event(action, event)
 
 func _process(delta: float) -> void:
@@ -61,6 +64,9 @@ func _process(delta: float) -> void:
 		effect.time -= delta
 	effects = effects.filter(func(effect: Dictionary) -> bool: return effect.time > 0.0)
 	if not game_over and not combat_frozen:
+		for field in fields:
+			field.time -= delta
+		fields = fields.filter(func(field: Dictionary) -> bool: return field.time > 0.0)
 		spawn_timer -= delta
 		if spawn_timer <= 0.0:
 			spawn_timer = enemy_spawn_interval
@@ -72,24 +78,64 @@ func _process(delta: float) -> void:
 	_update_hud()
 	queue_redraw()
 
-func perform_attack(origin: Vector2, direction: Vector2, attack_range: float, damage: int, knockback: float, color: Color, wide: bool) -> void:
+func perform_attack(origin: Vector2, direction: Vector2, attack_range: float, damage: int, knockback: float, color: Color, wide: bool, hit_targets = null, show_effect: bool = true, mark: String = "", mark_duration: float = 3.0) -> void:
 	var hit_any := false
 	# Duplicate because defeating an enemy removes it from the tracked array.
 	for enemy in enemies.duplicate():
 		if not is_instance_valid(enemy) or enemy.dead:
 			continue
+		if hit_targets != null and hit_targets.has(enemy.get_instance_id()):
+			continue
 		var offset: Vector2 = enemy.global_position - origin
 		if offset.length() <= attack_range + 17.0 and (wide or offset.length() < 24.0 or direction.dot(offset.normalized()) >= 0.25):
+			if hit_targets != null:
+				hit_targets[enemy.get_instance_id()] = true
 			var hit_direction: Vector2 = offset.normalized() if offset.length() > 1.0 else direction
+			if mark != "":
+				enemy.apply_mark(mark, mark_duration)
 			enemy.take_hit(damage, hit_direction, knockback)
 			combo_count += 1
 			combo_timer = hit_combo_timeout
 			spawn_effect(enemy.global_position, Color.WHITE, 24.0)
 			hit_any = true
-	effects.append({"pos": origin, "direction": direction, "radius": attack_range, "time": 0.18, "duration": 0.18, "color": color, "wide": wide, "slash": true})
+	if show_effect:
+		effects.append({"pos": origin, "direction": direction, "radius": attack_range, "time": 0.18, "duration": 0.18, "color": color, "wide": wide, "slash": true})
 	if hit_any:
 		freeze_timer = hit_stop_heavy if wide else hit_stop_duration
+		combat_frozen = freeze_timer > 0.0
 		shake_timer = shake_duration
+
+func hit_enemy(enemy: TrainingEnemy, damage: int, direction: Vector2, knockback: float) -> void:
+	if not is_instance_valid(enemy) or enemy.dead:
+		return
+	enemy.take_hit(damage, direction, knockback)
+	combo_count += 1
+	combo_timer = hit_combo_timeout
+	spawn_effect(enemy.global_position, Color.WHITE, 24.0)
+	freeze_timer = hit_stop_duration
+	combat_frozen = true
+	shake_timer = shake_duration
+
+func spawn_projectile(origin: Vector2, direction: Vector2, stats: CharacterStats, damage: int) -> void:
+	var shot = load("res://scripts/projectile.gd").new()
+	shot.position = origin
+	shot.direction = direction
+	shot.remaining = stats.attack_range
+	shot.damage = damage
+	shot.mark = stats.mark
+	shot.mark_duration = stats.mark_duration
+	shot.game = self
+	add_child(shot)
+
+func add_slow_field(pos: Vector2, skill: SkillData) -> void:
+	fields.append({"pos": pos, "radius": skill.radius, "time": skill.duration, "multiplier": skill.speed_multiplier})
+
+func enemy_speed_multiplier(pos: Vector2) -> float:
+	var multiplier := 1.0
+	for field in fields:
+		if pos.distance_to(field.pos) <= field.radius:
+			multiplier = minf(multiplier, field.multiplier)
+	return multiplier
 
 func spawn_effect(pos: Vector2, color: Color, radius: float) -> void:
 	effects.append({"pos": pos, "radius": radius, "time": 0.24, "duration": 0.24, "color": color, "slash": false})
@@ -97,7 +143,7 @@ func spawn_effect(pos: Vector2, color: Color, radius: float) -> void:
 func player_hit() -> void:
 	shake_timer = shake_duration
 	spawn_effect(player.global_position, Color(1, 0.25, 0.35), 40.0)
-	if player.hp <= 0:
+	if player.hp_values.all(func(value): return value <= 0):
 		game_over = true
 		player.set_process(false)
 
@@ -119,6 +165,7 @@ func _on_enemy_defeated(enemy: TrainingEnemy) -> void:
 
 func _make_hud() -> void:
 	hud = CanvasLayer.new()
+	hud.scale = Vector2(2.0, 2.0)
 	add_child(hud)
 	status_label = Label.new()
 	status_label.position = Vector2(20, 16)
@@ -134,24 +181,28 @@ func _make_hud() -> void:
 	instructions_label.add_theme_color_override("font_shadow_color", Color.BLACK)
 	instructions_label.add_theme_constant_override("shadow_offset_x", 2)
 	instructions_label.add_theme_constant_override("shadow_offset_y", 2)
-	instructions_label.text = "WASD: 移動   J: 攻撃   K: スキル   SPACE: 回避   L: 交代\n攻撃中に L で連携！  J は先行入力できます"
+	instructions_label.text = "E / L / I / A: 移動   K: 攻撃   T: スキル   N: 回避   S: 交代\n攻撃で星・月マークをつけて S で連携！"
 	hud.add_child(instructions_label)
 
 func _update_hud() -> void:
 	var switch_text := "READY" if player.switch_timer <= 0.0 else "%.1fs" % player.switch_timer
 	var skill_time: float = player.skill_timers[player.character_index]
 	var skill_text := "READY" if skill_time <= 0.0 else "%.1fs" % skill_time
-	status_label.text = "HP  %d / %d     %s\nSWITCH  %s     SKILL  %s\n%d HIT COMBO     %d K.O." % [player.hp, player.max_hp, player.characters[player.character_index].display_name, switch_text, skill_text, combo_count, kills]
+	status_label.text = "こはる HP %d / 120    澪 HP %d / 90\n操作中: %s\n交代 %s    %s %s\n%d HIT     %d K.O." % [player.hp_values[0], player.hp_values[1], player.characters[player.character_index].display_name, switch_text, player.characters[player.character_index].skill.display_name, skill_text, combo_count, kills]
+
 	if game_over:
 		status_label.text += "\n\nGAME OVER  —  R: RESTART"
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, arena_size), Color(0.13, 0.16, 0.22))
 	for x in range(0, int(arena_size.x), 80):
-		for y in range(0, int(arena_size.y), 80):
-			if (x / 80 + y / 80) % 2 == 0:
-				draw_rect(Rect2(x, y, 80, 80), Color(0.15, 0.19, 0.25))
+		for y in range(0, int(arena_size.y), 48):
+			if (x / 80 + y / 48) % 2 == 0:
+				draw_rect(Rect2(x, y, 80, 48), Color(0.15, 0.19, 0.25))
 	draw_rect(Rect2(Vector2.ZERO, arena_size), Color(0.5, 0.65, 0.75), false, 5.0)
+	for field in fields:
+		draw_circle(field.pos, field.radius, Color(0.3, 0.7, 1.0, 0.12))
+		draw_arc(field.pos, field.radius, 0.0, TAU, 48, Color(0.5, 0.85, 1.0, 0.7), 2.0)
 	for effect in effects:
 		var alpha: float = effect.time / effect.duration
 		var color: Color = effect.color
